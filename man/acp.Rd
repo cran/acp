@@ -7,18 +7,20 @@
 \alias{summary.acp}
 \alias{print.summary.acp}
 \title{Autoregressive Conditional Poisson (ACP) Regression}
-\description{Fit an ACP(1,1) regression model.}
+\description{Fit an ACP(p,q) regression model.}
 \usage{
 acp(x, ...)
-\method{acp}{default}(x, y, startval, varopt,...)
-\method{acp}{formula}(formula, data=list(), startval=NULL, varopt=T, family="acp",...)
+\method{acp}{default}(x, y, p, q ,startval, varopt,...)
+\method{acp}{formula}(formula, data=list(), p, q ,startval=NULL, varopt=T, family="acp",...)
 \method{print}{acp}(x, ...)
 \method{summary}{acp}(object, ...)
-\method{predict}{acp}(object, newxdata=NULL, newydata=NULL,...)
+\method{predict}{acp}(object, newydata=NULL, newxdata=NULL,...)
 }
 \arguments{
 \item{x}{ a numeric design matrix for the model. }
 \item{y}{ a numeric vector of responses. }
+\item{p}{ number of lags for the dependent variable. }
+\item{q}{ number of lags for the conditional mean. }
 \item{startval}{ a numeric vector of starting values. If not provided the package 
 will obtain starting values for the covariate parameters from a poisson regression 
 and for the autoregressive parameters from an arma(1,1) regression.}
@@ -38,7 +40,7 @@ This model has been proposed by Heinen (2003) for cases of count data exhibiting
 As pointed by Cameron and Trivedi (1998), when a count data set exhibits time dependence the plain Poisson 
 regression is not adequate. Heinen (2003) proposed the ACP model in close analogy to the Autoregressive Conditional Duration model (ACD) of 
 Engle and Russel (1998) and the GARCH model of Bollerslev (1986). The model can be also found in the international bibliography 
-as Integer GARCH (Fokianos and Fried, 2010). The most commonly used variant of the model is the ACP(1,1) which is implemented in the package.
+as Integer GARCH (Fokianos and Fried, 2010). 
 }
 \value{
 An object of class \code{logreg}, basically a list including elements
@@ -61,37 +63,43 @@ An object of class \code{logreg}, basically a list including elements
 
 data(polio)
 
-#Create time trend and seasonality variables
 trend=(1:168/168)
 cos12=cos((2*pi*(1:168))/12)
 sin12=sin((2*pi*(1:168))/12)
 cos6=cos((2*pi*(1:168))/6)
 sin6=sin((2*pi*(1:168))/6)
 
-polio_data<-data.frame(polio, trend , cos12, sin12, cos6, sin6)
 
 #Autoregressive Conditional Poisson Model with explaning covariates
-mod1 <- acp(polio~-1+trend+cos12+sin12+cos6+sin6,data=polio_data)
+polio_data<-data.frame(polio, trend , cos12, sin12, cos6, sin6)
+mod1 <- acp(polio~-1+trend+cos12+sin12+cos6+sin6,data=polio_data, p = 1 ,q = 2)
 summary(mod1)
 
-##Static out-of-sample fit example
+#Static out-of-sample fit example
 train<-data.frame(polio_data[c(1: 119),])
-test<-data.frame(polio_data[c(120:nrow(polio_data)),])
-vpolio<-polio_data[[1]]
-yfor<-vpolio[120:nrow(polio_data)]
-predict(mod1,test,yfor)
+mod1t <- acp(polio~-1+trend+cos12+sin12+cos6+sin6,data=train, p = 1  ,q = 2)
+xpolio_data<-data.frame(trend , cos12, sin12, cos6, sin6)
+test<-xpolio_data[c(120:nrow(xpolio_data)),]
+yfor<-polio_data[120:nrow(polio_data),1]
+predict(mod1t,yfor,test)
+
+#Autoregressive Conditional Poisson Model without explaning covariates
+polio_data<-data.frame(polio)
+mod2 <- acp(polio~-1,data=polio_data, p = 3 ,q = 1)
+summary(mod2)
 
 #Poisson Model with explaning covariates
-mod2 <- acp(polio~trend+cos12+sin12+cos6+sin6,data=polio_data,family="poisson")
-summary(mod2)
+polio_data<-data.frame(polio, trend , cos12, sin12, cos6, sin6)
+mod3 <- acp(polio~trend+cos12+sin12+cos6+sin6,data=polio_data,family="poisson")
+summary(mod3)
 
 #Default method for ACP regression
 X<-cbind(trend , cos12, sin12, cos6, sin6)
-mod3<-acp(X,polio,startval=NULL,varopt=TRUE)
-print(mod3)
-summary(mod3)
-residuals(mod3)
-mod3$vcov
+mod4<-acp(X,polio,3,1,startval=NULL,varopt=TRUE)
+print(mod4)
+summary(mod4)
+residuals(mod4)
+mod4$vcov
 }
 \keyword{regression}
 
