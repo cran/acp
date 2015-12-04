@@ -12,15 +12,18 @@ sum(-logl)
 k<-ncol(x)
 ## perform optimization
 op<-optim(array(0.1,dim=c(1,k)),.poissonlik,y=y,x=x,method="BFGS",hessian=T)
-## compute coefficients
+## compute coefficients and logl
 coef<-c(op$par)
+logl<-c(op$value)
 ## degrees of freedom and standard deciation of residuals 
 df <- nrow(x)-ncol(x)
 sigma2 <- sum((y - exp(x%*%coef))^2)/df
 ## compute covariance matrix
 vcov<-solve(op$hessian)
 colnames(vcov) <- rownames(vcov) <- colnames(x)
-list(coefficients = coef,
+BIC = -2*(-logl/nrow(x))+(k+1)*log(nrow(x))/nrow(x)
+AIC = -2*(-logl/nrow(x))+2*(k+1)/nrow(x)
+list(coefficients = coef, logl = -logl, AIC = AIC, BIC = BIC,
 vcov = vcov,
 sigma = sqrt(sigma2),
 df = df)
@@ -33,6 +36,8 @@ y <- as.numeric(y)
 est <- .poissonEst(x, y)
 est$fitted.values <- as.vector(exp(x %*% est$coefficients))
 est$residuals <- y - est$fitted.values
+est$logl <- est$logl
+est$BIC <- est$BIC
 est$call <- match.call()
 class(est) <- "acp"
 est
@@ -106,8 +111,9 @@ else{
 op<-optim(startval,fn=.acpliknc,gr=NULL,y=y,pp=p,qq=q,method="BFGS",hessian=varopt)
 }
 
-## compute coefficients
+## compute coefficients and logl
 coef<-op$par
+logl<-op$value
 ## compute conditional mean
 lambda <- matrix(NA,n,1)
 lambda[1] <- mean(y)
@@ -143,7 +149,9 @@ namevec[1+i]<-paste("b",i)
 for (i in 1:q){ 
 namevec[1+p+i]<-paste("c",i)
 }
-list(coefficients = coef, vcov = vcov,
+BIC = -2*(-logl/n)+(p+q+1)*log(n)/n
+AIC = -2*(-logl/n)+2*(p+q+1)/n
+list(coefficients = coef, logl = -logl, vcov = vcov, BIC = BIC, AIC = AIC,
 df = df)
 }
 else
@@ -160,7 +168,9 @@ for (i in 1:q){
 namevec[1+p+i]<-paste("c",i)
 }
 colnames(vcov) <- rownames(vcov) <- namevec
-list(coefficients = coef,
+BIC = -2*(-logl/n)+(p+q+1)*log(n)/n
+AIC = -2*(-logl/n)+2*(p+q+1)/n
+list(coefficients = coef, logl = -logl, BIC = BIC, AIC = AIC,
 vcov = vcov,
 sigma = sqrt(sigma2),
 df = df, p = p, q = q)
@@ -183,8 +193,9 @@ op<-optim(c(pr$par,asval),fn=.acplikc,gr=NULL,y=y,x=x,pp=p,qq=q,method="BFGS",he
 else{
 op<-optim(startval,fn=.acplikc,gr=NULL,y=y,x=x,pp=p,qq=q,method="BFGS",hessian=varopt)
 }
-## compute coefficients
+## compute coefficients and logl
 coef<-op$par
+logl<-op$value
 ## compute conditional mean
 lambda <- matrix(NA,n,1)
 lambda[1] <- mean(y)
@@ -221,7 +232,9 @@ namevec[k+1+i]<-paste("b",i)
 for (i in 1:q){ 
 namevec[k+1+p+i]<-paste("c",i)
 }
-list(coefficients = coef,
+BIC = -2*(-logl/n)+(k+p+q+1)*log(n)/n
+AIC = -2*(-logl/n)+2*(k+p+q+1)/n
+list(coefficients = coef, logl = -logl, BIC = BIC, AIC = AIC,
 vcov = vcov,
 sigma = sqrt(sigma2),
 df = df, p = p, q = q)
@@ -241,7 +254,9 @@ for (i in 1:q){
 namevec[k+1+p+i]<-paste("c",i)
 }
 colnames(vcov) <- rownames(vcov) <- namevec
-list(coefficients = coef,
+BIC = -2*(-logl/n)+(k+p+q+1)*log(n)/n
+AIC = -2*(-logl/n)+2*(k+p+q+1)/n
+list(coefficients = coef, logl = -logl, BIC = BIC, AIC = AIC,
 vcov = vcov,
 sigma = sqrt(sigma2),
 df = df, p = p, q = q)
@@ -279,6 +294,9 @@ lambda[(p+1):n] <- filter(est$coefficients[1] + na.omit(vylag%*%vparlag), filter
 mu<-lambda
 est$fitted.values <- as.vector(mu)
 est$residuals <- (y - est$fitted.values)/sqrt(est$fitted.values)
+est$logl <- est$logl
+est$AIC <- est$AIC
+est$BIC <- est$BIC 
 }
 else{
 k<-ncol(x)
@@ -302,6 +320,9 @@ lambda[(p+1):n] <- filter(est$coefficients[k+1] + na.omit(vylag%*%vparlag), filt
 mu<-exp(x%*%est$coefficients[1:k])*lambda
 est$fitted.values <- as.vector(mu)
 est$residuals <- (y - est$fitted.values)/sqrt(est$fitted.values)
+est$logl <- est$logl
+est$AIC <- est$AIC
+est$BIC <- est$BIC 
 }
 est$call <- match.call()
 class(est) <- "acp"
@@ -314,6 +335,12 @@ cat("Call:\n")
 print(x$call)
 cat("\nCoefficients:\n")
 print(x$coefficients)
+cat("\nLogl:\n")
+print(x$logl)
+cat("\nAIC:\n")
+print(x$AIC)
+cat("\nBIC:\n")
+print(x$BIC)
 }
 
 
@@ -325,6 +352,12 @@ cat("Call:\n")
 print(object$call)
 cat("\nCoefficients:\n")
 print(object$coefficients)
+cat("\nLogl:\n")
+print(object$logl)
+cat("\nAIC:\n")
+print(object$AIC)
+cat("\nBIC:\n")
+print(object$BIC)
 }
 else
 {
@@ -335,7 +368,7 @@ StdErr = se,
 t.value = tval,
 p.value = 2*pt(-abs(tval), df=object$df))
 res <- list(call=object$call,
-coefficients=TAB)
+coefficients=TAB, logl=object$logl, AIC=object$AIC ,BIC=object$BIC)
 class(res) <- "summary.acp"
 res
 }
@@ -349,6 +382,12 @@ cat("Call:\n")
 print(x$call)
 cat("\nCoefficients:\n")
 print(x$coefficients)
+cat("\nLogl:\n")
+print(x$logl)
+cat("\nAIC:\n")
+print(x$AIC)
+cat("\nBIC:\n")
+print(x$BIC)
 }
 else
 {
@@ -356,6 +395,12 @@ cat("Call:\n")
 print(x$call)
 cat("\n")
 printCoefmat(x$coefficients, P.values=TRUE, has.Pvalue=TRUE)
+cat("\nLogl:\n")
+print(x$logl)
+cat("\nAIC:\n")
+print(x$AIC)
+cat("\nBIC:\n")
+print(x$BIC)
 }
 }
 

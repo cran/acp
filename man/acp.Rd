@@ -48,6 +48,9 @@ An object of class \code{logreg}, basically a list including elements
 \item{vcov}{ covariance matrix of coefficients }
 \item{fitted.values}{ fitted values }
 \item{residuals}{ residuals }
+\item{logl}{ log-likelihood }
+\item{AIC}{ AKAIKE information criterion }
+\item{BIC}{ Bayesian information criterion }
 }
 \author{Siakoulis Vasileios}
 \references{
@@ -100,6 +103,8 @@ print(mod4)
 summary(mod4)
 residuals(mod4)
 mod4$vcov
+mod4$AIC
+mod4$BIC
 }
 \keyword{regression}
 
